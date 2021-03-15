@@ -82,6 +82,10 @@ def parse_args():
 
     return args
 
+def reini_weight(param, gain=1.2):
+    p_data = param.data
+    p_mean = p_data - p_data.mean([1,2,3],True)
+    param.data = p_mean*gain
 
 def main():
     args = parse_args()
@@ -160,6 +164,12 @@ def main():
         train_cfg=cfg.get('train_cfg'),
         test_cfg=cfg.get('test_cfg'))
 
+    if 'mean_weight' in cfg.keys() and cfg.mean_weight:
+        for name, module in model.named_modules():
+            if isinstance(module, torch.nn.Conv2d) and 'backbone' not in name:
+                print(name)
+                reini_weight(module.weight)
+    
     datasets = [build_dataset(cfg.data.train)]
     if len(cfg.workflow) == 2:
         val_dataset = copy.deepcopy(cfg.data.val)
