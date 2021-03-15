@@ -13,6 +13,7 @@ from mmdet.core import DistEvalHook, EvalHook
 from mmdet.datasets import (build_dataloader, build_dataset,
                             replace_ImageToTensor)
 from mmdet.utils import get_root_logger
+from .my_opt_hook import MyOptimizerHook
 
 
 def set_random_seed(seed, deterministic=False):
@@ -122,9 +123,16 @@ def train_detector(model,
         optimizer_config = cfg.optimizer_config
 
     # register hooks
-    runner.register_training_hooks(cfg.lr_config, optimizer_config,
+    if 'mean_grad' in optimizer_config.keys() and optimizer_config['mean_grad']:
+        runner.register_training_hooks(cfg.lr_config, None,
+                                       cfg.checkpoint_config, cfg.log_config,
+                                       cfg.get('momentum_config', None))
+        runner.register_hook(MyOptimizerHook(**optimizer_config))
+    else:
+        runner.register_training_hooks(cfg.lr_config, cfg.optimizer_config,
                                    cfg.checkpoint_config, cfg.log_config,
                                    cfg.get('momentum_config', None))
+
     if distributed:
         if isinstance(runner, EpochBasedRunner):
             runner.register_hook(DistSamplerSeedHook())
